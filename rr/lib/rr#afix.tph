@@ -1,0 +1,359 @@
+// This is the Rogue Rebalancing Assorted Fixes macro
+// The majority of the code has been borrowed from the G3 BG2 Fixpack with the author's permission (thanks CamDawg!)
+// Therefore, the code has been set up in such a way that it won't needlessly re-apply the same fixes twice in case the G3 BG2 Fixpack is already installed
+// Ergo, most of these fixes are simply there for the people who are still using Baldurdash or no fixpack at all
+// However, there is also some code here which is required for the proper functioning of Rogue Rebalancing whether the G3 BG2 Fixpack is present or not
+// For example, adding new projectiles, cloning certain spells and appending STATE.IDS with custom entries are all instances of necessary code
+
+
+DEFINE_ACTION_MACRO ~RR#AFIX~ BEGIN
+
+ACTION_IF NOT FILE_EXISTS_IN_GAME ~RR#AFIX.RR~ THEN BEGIN
+COPY_EXISTING ~sw1h01.itm~ ~override/RR#AFIX.RR~                                               // dummy file, allows the detection of the RR Assorted Fixes
+PRINT ~Initializing Assorted Fixes installation ...~
+
+
+//  Add new projectiles
+
+ADD_PROJECTILE ~RR/RR_CORE/PRO/RR#VRNP.PRO~                                                    // New projectile, slightly below visual range, doesn't affect party, used by the Blade's Weapons Display, the Jester's song and the new Bardic HLAs
+ADD_PROJECTILE ~RR/RR_CORE/PRO/RR#VRPO.PRO~                                                    // New projectile, slightly above visual range, only affects party, used by the Bard, Blade and Skald songs
+
+// Add new secondary types
+
+ADD_SECTYPE RR#DEATA @37                                                                       // add a new secondary type to remove Death Attack after the first successful hit
+
+ADD_SECTYPE RR#FSCNT @92                                                                       // add a new secondary type to remove Fascinate/Mesmerize effects
+
+
+// New secondary type removal spells
+
+COPY    ~RR/RR_CORE/SPELLS/RR#UNFSC.SPL~ ~override~                                            // Fascinate effect removal spell
+  LPF ALTER_EFFECT
+    INT_VAR
+      check_globals = 0
+      check_headers = 1
+      match_opcode = 221 // remove secondary type
+      parameter2 = RR#FSCNT
+  END
+BUT_ONLY
+
+
+
+// STATE.IDS additions (mirrors G3 BG2 Fixpack, SCSII and IESDP code)
+
+APPEND ~STATE.IDS~ ~0x80101FEF CD_STATE_NOTVALID~ UNLESS ~CD_STATE_NOTVALID~                   // CamDawg's custom IsValidForPartyDialogue() state
+APPEND ~STATE.IDS~ ~0x00000FC0 STATE_REALLY_DEAD~ UNLESS ~0x00000FC0 STATE_REALLY_DEAD~        // includes all possible death states (normal, frozen...)
+APPEND ~STATE.IDS~ ~0x00102029 STATE_HARMLESS~ UNLESS ~0x00102029 STATE_HARMLESS~              // includes Feeblemind, Charmed, Helpless, Stunned, Sleeping
+APPEND ~STATE.IDS~ ~0x60400010 STATE_ILLUSIONS~ UNLESS ~0x60400010 STATE_ILLUSIONS~            // includes Invisible, Imp. Invisibility, Mirror Image, Blur
+APPEND ~STATE.IDS~ ~0x80040004 STATE_RANGED_TARGET~ UNLESS ~0x80040004 STATE_RANGED_TARGET~    // includes Blind, Confused, Panic
+APPEND ~STATE.IDS~ ~0x00000029 STATE_IMMOBILE~ UNLESS ~0x00000029 STATE_IMMOBILE~              // includes Helpless, Stunned, Sleeping
+APPEND ~STATE.IDS~ ~0x00400010 STATE_NOT_TARGETABLE~ UNLESS ~0x00400010 STATE_NOT_TARGETABLE~  // includes Improved Invisibility and plain Invisibility
+APPEND ~STATE.IDS~ ~0x8010202D STATE_DISABLED~ UNLESS ~0x8010202D STATE_DISABLED~              // includes Helpless, Stunned, Panic, Sleeping, Charmed, Feebleminded, Confused
+
+
+// TRIGGER.IDS additions (mirrors G3 BG2 Fixpack code)
+
+APPEND ~TRIGGER.IDS~ ~0x00A1 SpellCastOnMeRES(S:Spell*,O:Caster*)~
+              UNLESS ~0x00A1 SpellCastOnMeRES(S:Spell\*,O:Caster\*)~
+APPEND ~TRIGGER.IDS~ ~0x0091 SpellCastRES(S:Spell*,O:Object*)~
+              UNLESS ~0x0091 SpellCastRES(S:Spell\*,O:Object\*)~
+APPEND ~TRIGGER.IDS~ ~0x00A6 SpellCastPriestRES(S:Spell*,O:Object*)~
+              UNLESS ~0x00A6 SpellCastPriestRES(S:Spell\*,O:Object\*)~
+APPEND ~TRIGGER.IDS~ ~0x00A7 SpellCastInnateRES(S:Spell*,O:Object*)~
+              UNLESS ~0x00A7 SpellCastInnateRES(S:Spell\*,O:Object\*)~
+APPEND ~TRIGGER.IDS~ ~0x4031 HaveSpellRES(S:Spell*)~
+              UNLESS ~0x4031 HaveSpellRES(S:Spell\*)~
+APPEND ~TRIGGER.IDS~ ~0x40D5 ActuallyInCombat()~
+              UNLESS ~0x40D5 ActuallyInCombat()~
+
+
+// Music lists which are used in RR and which need to be in NPC format in order to be used via PlaySong() action (matches unmodded game, undoes G3 BG2 Fixpack change)
+// Using MXAERIE.MUS as a base since Aerie's theme song is in NPC format
+ACTION_IF FILE_EXISTS_IN_GAME ~CDDETEVL.pro~ AND
+          GAME_INCLUDES ~soa~
+BEGIN
+  COPY ~music/mxaerie.mus~ ~music/mxkalah.mus~                                                   // Kalah's theme (used in Arledrian's quest)
+    REPLACE_TEXTUALLY ~AERIE~ ~KALAH~
+  COPY ~music/mxaerie.mus~ ~music/mxkhali.mus~                                                   // Khalid's theme (used in the CoC encounter)
+    REPLACE_TEXTUALLY ~AERIE~ ~KHALI~
+  COPY ~music/mxaerie.mus~ ~music/mxthief.mus~                                                   // Shadow Thief theme (used in the STI component)
+    REPLACE_TEXTUALLY ~AERIE~ ~THIEF~
+END
+
+
+ACTION_IF !FILE_EXISTS_IN_GAME ~CDDETEVL.pro~ AND
+          !FILE_EXISTS_IN_GAME ~macinit.bcs~ AND
+          !FILE_EXISTS_IN_GAME ~monkfist.2da~                                                    // No EEs
+BEGIN
+PRINT ~G3 BG2 Fixpack Core Fixes not detected, mirroring relevant parts ...~                     // useful as debug info as it shows up in SETUP-RR.DEBUG
+
+// KIT.IDS fixes
+
+COPY_EXISTING ~kit.ids~ ~override~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]TRUECLASS[ %TAB%]*~              ~0x4000 TRUECLASS~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]BERSERKER[ %TAB%]*~              ~0x4001 BERSERKER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]WIZARDSLAYER[ %TAB%]*~           ~0x4002 WIZARDSLAYER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]KENSAI[ %TAB%]*~                 ~0x4003 KENSAI~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]CAVALIER[ %TAB%]*~               ~0x4004 CAVALIER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]INQUISITOR[ %TAB%]*~             ~0x4005 INQUISITOR~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]UNDEADHUNTER[ %TAB%]*~           ~0x4006 UNDEADHUNTER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]MAGESCHOOL_ABJURER[ %TAB%]*~     ~0x0040 MAGESCHOOL_ABJURER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]MAGESCHOOL_CONJURER[ %TAB%]*~    ~0x0080 MAGESCHOOL_CONJURER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]MAGESCHOOL_DIVINER[ %TAB%]*~     ~0x0100 MAGESCHOOL_DIVINER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]MAGESCHOOL_ENCHANTER[ %TAB%]*~   ~0x0200 MAGESCHOOL_ENCHANTER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]MAGESCHOOL_ILLUSIONIST[ %TAB%]*~ ~0x0400 MAGESCHOOL_ILLUSIONIST~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]MAGESCHOOL_INVOKER[ %TAB%]*~     ~0x0800 MAGESCHOOL_INVOKER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]MAGESCHOOL_NECROMANCER[ %TAB%]*~ ~0x1000 MAGESCHOOL_NECROMANCER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]MAGESCHOOL_TRANSMUTER[ %TAB%]*~  ~0x2000 MAGESCHOOL_TRANSMUTER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]MAGESCHOOL_GENERALIST[ %TAB%]*~  ~0x4000 MAGESCHOOL_GENERALIST~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]FERALAN[ %TAB%]*~                ~0x4007 FERALAN~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]STALKER[ %TAB%]*~                ~0x4008 STALKER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]BEASTMASTER[ %TAB%]*~            ~0x4009 BEASTMASTER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]ASSASIN[ %TAB%]*~                ~0x400A ASSASIN~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]BOUNTYHUNTER[ %TAB%]*~           ~0x400B BOUNTYHUNTER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]SWASHBUCKLER[ %TAB%]*~           ~0x400C SWASHBUCKLER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]BLADE[ %TAB%]*~                  ~0x400D BLADE~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]JESTER[ %TAB%]*~                 ~0x400E JESTER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]SKALD[ %TAB%]*~                  ~0x400F SKALD~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]GODTALOS[ %TAB%]*~               ~0x4013 GODTALOS~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]GODHELM[ %TAB%]*~                ~0x4014 GODHELM~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]GODLATHANDER[ %TAB%]*~           ~0x4015 GODLATHANDER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]TOTEMIC[ %TAB%]*~                ~0x4010 TOTEMIC~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]SHAPESHIFTER[ %TAB%]*~           ~0x4011 SHAPESHIFTER~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]BEASTFRIEND[ %TAB%]*~            ~0x4012 BEASTFRIEND~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]BARBARIAN[ %TAB%]*~              ~0x40000000 BARBARIAN~
+  REPLACE_TEXTUALLY ~.*[ %TAB%]WILDMAGE[ %TAB%]*~               ~0x80000000 WILDMAGE~
+BUT_ONLY
+
+APPEND ~kit.ids~ ~0x4000 TRUECLASS~ UNLESS ~[ %TAB%]TRUECLASS[ %TAB%]*~
+APPEND ~kit.ids~ ~0x40000000 BARBARIAN~ UNLESS ~[ %TAB%]BARBARIAN[ %TAB%]*~
+APPEND ~kit.ids~ ~0x80000000 WILDMAGE~ UNLESS ~[ %TAB%]WILDMAGE[ %TAB%]*~
+
+// Fix Garrick's misplaced trigger in AR0800.BCS which can prevent the STI and CoC encounters from starting (mirrors G3 BG2 Fixpack code)
+
+ACTION_IF FILE_EXISTS_IN_GAME ar0800.bcs AND GAME_INCLUDES ~soa~ BEGIN
+  COPY_EXISTING ~ar0800.BCS~ ~override~
+    DECOMPILE_AND_PATCH BEGIN
+      REPLACE_TEXTUALLY ~Global("GarrickSpeak","GLOBAL",1)~ ~False()~
+    END
+  BUT_ONLY
+END
+
+
+
+// Swashbuckler's melee weapon specialization fix (mirrors G3 BG2 Fixpack code)
+
+COPY_EXISTING ~WEAPPROF.2DA~ ~override~                             // correct the proficiency limits
+  SET_2DA_ENTRY_LATER ~RR#WPSWASH~ 16 41 ~2~                        // 2 points in Katana
+  SET_2DA_ENTRY_LATER ~RR#WPSWASH~ 26 41 ~1~                        // 1 point in Crossbow
+  SET_2DA_ENTRY_LATER ~RR#WPSWASH~ 28 41 ~1~                        // 1 point in Shortbow
+  SET_2DA_ENTRY_LATER ~RR#WPSWASH~ 30 41 ~1~                        // 1 point in Sling
+  SET_2DA_ENTRIES_NOW ~RR#WPSWASH~ 1
+BUT_ONLY
+
+
+
+// Set the spell level of the Bounty Hunters' special snares and other snares and traps to 1 (mirrors G3 BG2 Fixpack code)
+
+ACTION_FOR_EACH spell IN
+                SPCL412                              // Set snare
+                SPCL414                              // Set special snare
+                SPCL910                              // Set Spike Trap
+                SPCL911                              // Set Exploding Trap
+BEGIN
+  ACTION_IF FILE_EXISTS_IN_GAME "%spell%.spl" BEGIN
+    COPY_EXISTING "%spell%.spl" override
+      WRITE_LONG 0x34 1                                                // Set the spell level to 1
+    BUT_ONLY
+  END
+END
+
+
+
+// Fix Skald's lack of THAC0 bonus (mirrors G3 BG2 Fixpack code)
+
+COPY_EXISTING ~CLABBA04.2DA~ ~override~
+  REPLACE_TEXTUALLY ~AP_SPCL541~ ~AP_SPCL141~                       // Replaces Skald's +1 damage with Swashbuckler's +1 THAC0/damage
+UNLESS ~AP_SPCL141~
+BUT_ONLY
+
+
+
+// Boots of Speed fix, replace buggy haste with a movement rate bonus fix (mirrors G3 BG2 Fixpack code)
+
+ACTION_IF FILE_EXISTS_IN_GAME boot01.itm BEGIN
+  COPY_EXISTING ~boot01.itm~ ~override~
+    LPF ALTER_EFFECT
+      INT_VAR
+        check_globals = 1
+        check_headers = 0
+        match_opcode = 16 // haste
+        opcode = 126      // movement-rate bonus
+        parameter1 = 200  // %
+        parameter2 = 2    // set
+        resist_dispel = 0
+    END
+  BUT_ONLY
+END
+
+
+
+// Assassin Poison Weapon ability should be a save vs. death, not save vs. everything (mirrors G3 BG2 Fixpack code)
+
+COPY_EXISTING ~SPCL422.EFF~ ~override~
+  WRITE_LONG 0x40 0x4 // saving throw vs. death ONLY
+BUT_ONLY
+
+// Assassin Poison Weapon ability has incorrect damage (mirrors G3 BG2 Fixpack code)
+
+COPY_EXISTING ~SPCL422A.EFF~ ~override~
+  WRITE_LONG 0x1c 0x2 // +2 damage, not 1
+BUT_ONLY
+
+
+
+// Assassin and skald thac0 bonuses not displaying in character record (mirrors G3 BG2 Fixpack code)
+
+COPY_EXISTING ~spcl421.spl~ ~override~
+              ~spcl541.spl~ ~override~
+  LPF ALTER_EFFECT
+    INT_VAR
+      check_globals = 0
+      check_headers = 1
+      match_opcode = 177 // Use EFF
+      opcode = 278       // To-hit modifier
+      parameter1 = 1     // Modifier
+      parameter2 = 0     // Cumulative
+    STR_VAR
+      resource = ""      // Null resref
+  END
+BUT_ONLY
+
+
+
+// Nishruu and Hakeashar racial fixes (mirrors G3 BG2 Fixpack code)
+
+ACTION_IF FILE_EXISTS_IN_GAME haksu.cre AND
+          FILE_EXISTS_IN_GAME nishrusu.cre
+BEGIN
+  COPY_EXISTING ~HAKSU.CRE~    ~override~
+                ~NISHRUSU.CRE~ ~override~
+    WRITE_BYTE 0x0272 136 // set race to Mist
+  BUT_ONLY
+END
+
+
+
+// Fix Arledrian failing to go hostile (mirrors G3 BG2 Fixpack code)
+
+ACTION_IF FILE_EXISTS_IN_GAME ar0312.bcs AND GAME_INCLUDES ~soa~ BEGIN
+  COPY_EXISTING ~AR0312.BCS~  ~override~
+    DECOMPILE_AND_PATCH BEGIN
+      REPLACE_TEXTUALLY ~SetGlobal("ArledHostile","GLOBAL",1)~ ~SetGlobal("ArledHostile","AR0312",1)~
+    END
+  BUT_ONLY
+END
+
+
+
+// Fix a mistargeted opcode in the Death Ward spell which prevents Detectable Spells from noticing it correctly (mirrors G3 BG2 Fixpack code)
+
+COPY_EXISTING ~sppr409.spl~ ~override~
+  LPF ALTER_EFFECT
+    INT_VAR
+      check_globals = 0
+      check_headers = 1
+      match_opcode = 282
+      target = 2
+  END
+BUT_ONLY
+
+
+
+// Create a new Fighter/Mage/Thief HLA table (mirrors G3 BG2 Fixpack code)
+
+ACTION_IF NOT FILE_EXISTS_IN_GAME ~LUFMT.2DA~ THEN BEGIN
+  COPY_EXISTING ~LUFT0.2DA~ ~override/LUFMT.2DA~
+    FOR (ROW = 23; ROW < 26; ROW = ROW + 1) BEGIN
+      SET_2DA_ENTRY_LATER ~LUFMT~ ROW 4 ~1~
+      SET_2DA_ENTRY_LATER ~LUFMT~ ROW 5 ~99~
+      SET_2DA_ENTRY_LATER ~LUFMT~ ROW 6 ~1~
+    END
+    SET_2DA_ENTRY_LATER ~LUFMT~ 23 1 ~AP_SPCL928~
+    SET_2DA_ENTRY_LATER ~LUFMT~ 24 1 ~AP_SPCL929~
+    SET_2DA_ENTRY_LATER ~LUFMT~ 24 7 ~AP_SPCL928~
+    SET_2DA_ENTRY_LATER ~LUFMT~ 25 1 ~AP_SPCL930~
+    SET_2DA_ENTRY_LATER ~LUFMT~ 25 7 ~AP_SPCL929~
+    SET_2DA_ENTRIES_NOW ~LUFMT~ 1
+  BUT_ONLY
+END
+
+// Fix the duration of the Invisibility 10' Radius spell (mirrors G3 BG2 Fixpack code)
+
+COPY_EXISTING ~spwi307.spl~ ~override~
+  LPF ALTER_EFFECT
+    INT_VAR
+      check_globals = 0
+      check_headers = 1
+      match_duration = 300
+      duration = 7200
+  END
+  LPF ALTER_EFFECT
+    INT_VAR
+      check_globals = 0
+      check_headers = 1
+      match_opcode = 174
+      target = 2
+  END
+BUT_ONLY
+
+
+END // ends the ACTION_IF check for the G3 BG2 Fixpack Core Component
+
+
+/*
+ACTION_IF NOT FILE_EXISTS_IN_GAME ~cdfp0003.g3~ AND !FILE_EXISTS_IN_GAME ~macinit.bcs~ THEN BEGIN
+PRINT ~G3 BG2 Fixpack BETA Core Fixes not detected, mirroring relevant parts ...~    // useful as debug info as it shows up in SETUP-RR.DEBUG
+
+END
+*/
+
+
+// Clone several spells and make them innate in order to avoid Cowled Wizard magic license warning and item caster level issues
+
+COPY_EXISTING ~SPWI201.SPL~  ~override/RR#WI201.SPL~                               // Clone Blur (used by Rogue's Cowl)
+LAUNCH_PATCH_FUNCTION ~RR#SP2IN~ INT_VAR "rr#ctime" = "1" END
+
+COPY_EXISTING ~SPWI208.SPL~ ~override/RR#WI208.SPL~                                // Clone Know Alignment (used by Keeper of the Law)
+LAUNCH_PATCH_FUNCTION ~RR#SP2IN~ INT_VAR "rr#ctime" = "1" END
+
+COPY_EXISTING ~SPWI212.SPL~ ~override/RR#WI212.SPL~                                // Clone Mirror Image (used by Rogue's Cowl)
+LAUNCH_PATCH_FUNCTION ~RR#SP2IN~ INT_VAR "rr#ctime" = "1" END
+
+COPY_EXISTING ~SPDR401.SPL~ ~override/RR#WI405.SPL~                                // Clone Improved Invisibility (used by Rogue's Ward)
+LAUNCH_PATCH_FUNCTION ~RR#SP2IN~ INT_VAR "rr#ctime" = "1" END
+
+COPY_EXISTING ~SPWI406.SPL~ ~override/RR#WI406.SPL~                                // Clone Minor Globe of Invulnrability (used by the Barrier Amulet)
+LAUNCH_PATCH_FUNCTION ~RR#SP2IN~ INT_VAR "rr#ctime" = "1" END
+
+COPY_EXISTING ~SPWI408.SPL~ ~override/RR#WI408.SPL~                                // Clone Stoneskin (used by the Barrier Amulet)
+LAUNCH_PATCH_FUNCTION ~RR#SP2IN~ INT_VAR "rr#ctime" = "1" END
+
+COPY_EXISTING ~SPWI507.SPL~ ~override/RR#WI507.SPL~                                // Clone Hold Monster (used by the Hold Fast longsword)
+LAUNCH_PATCH_FUNCTION ~RR#SP2IN~ INT_VAR "rr#ctime" = "1" END
+
+COPY_EXISTING ~SPWI523.SPL~ ~override/RR#WI523.SPL~                                // Clone Sunfire (used by Blazing Glory)
+LAUNCH_PATCH_FUNCTION ~RR#SP2IN~ INT_VAR "rr#ctime" = "1" "rr#rinvs" = "1" END
+
+COPY_EXISTING ~SPWI721.SPL~ ~override/RR#WI721.SPL~                                // Clone Mass Invisibility (used by Venduris' Ring of Concealment)
+LAUNCH_PATCH_FUNCTION ~RR#SP2IN~ INT_VAR "rr#ctime" = "1" END
+
+
+// New thievery related spells
+
+COPY    ~RR/RR_CORE/SPELLS/RR#FEAR.SPL~   ~override~                               // Custom Fear spell, used by Revised Thievery for familiar panicking
+
+
+
+END  // ends RR#AFIX main ACTION_IF block
+END  // ends macro

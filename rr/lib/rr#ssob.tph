@@ -1,0 +1,31 @@
+// This is the Rogue Rebalancing SSoB macro
+// It's used for patching the Short Sword of Backstabbing with Thief specific effects
+// Works on BG2, BGT and Tutu
+// Patching code now uses WeiDU's inherent ADD_ITEM_EQEFFECT macro (courtesy of Gort)
+
+
+DEFINE_ACTION_MACRO ~RR#SSOB~ BEGIN
+
+// Patch the Short Sword of Backstabbing with the Thief specific effects
+ACTION_IF NOT MOD_IS_INSTALLED ITEM_REV.TP2 0 THEN BEGIN                           // Item Revisions mod check
+
+COPY_EXISTING ~%tutu_var%SW1H10.ITM~ ~override~                                    // Short Sword of Backstabbing
+  SAY DESC @61                                                                     // updated description
+  PATCH_FOR_EACH resource IN RR#SSOBA RR#SSOBB BEGIN
+    PATCH_FOR_EACH parameter1 IN 4 9 10 13 15 BEGIN
+      LPF ADD_ITEM_EQEFFECT
+        INT_VAR
+          opcode = 177 // #177 (use EFF file)
+          target = 1 // self
+          timing = 2 // while equipped
+          parameter1
+          parameter2 = 5 // CLASS.IDS
+        STR_VAR
+          resource
+      END
+    END
+  END
+BUT_ONLY
+
+END  // ends the ACTION_IF Item Revisions check block
+END  // ends macro
