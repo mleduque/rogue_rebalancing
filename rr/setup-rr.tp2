@@ -3532,6 +3532,20 @@ END
 END                                                                                // end check for Item Revisions' potion component
 
 
+// ************************************ Subcomponent marker ***************************************************************************
+
+
+BEGIN @116 DESIGNATED 110  // Retain default thievery potions and prevent their effects from stacking
+SUBCOMPONENT @8  // Revised Thievery
+
+LAUNCH_ACTION_MACRO ~RR#AFIX~
+
+// *** For fellow modders *** this subcomponent can be detected by searching for the following file - RR#PTN36.SPL
+
+INCLUDE ~RR/LIB/RR#IDTLS.TPH~                                                      // Include my custom "Identify Top Level Script" function
+INCLUDE ~RR/LIB/RR#THVRY.TPH~                                                      // Include the Revised Thievery macro (hosts main code)
+LAUNCH_ACTION_MACRO ~RR#THVRY~
+
 
 ///////////////////////////////////////////////////////////////////////
 // Rogue Rebalancing - Chosen of Cyric encounter

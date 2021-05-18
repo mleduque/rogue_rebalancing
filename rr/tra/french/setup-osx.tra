@@ -23,6 +23,8 @@ effets de se cumuler.~
 @18 = ~Equipement ameliorable~
 @19 = ~Revisions des capacites de haut niveau du voleur~
 
+@116 = ~Garder les potions par defaut~
+
 @900 = ~Ce composant est uniquement disponible pour la version Windows du jeu~
 @902 = ~* * * Ce composant ne peut pas etre installe sur ce jeu * * *~
 @911 = ~(Inutile de l'installer. La version du fixpack de G3 est deja presente.)~
