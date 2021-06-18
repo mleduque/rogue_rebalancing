@@ -3535,7 +3535,7 @@ END                                                                             
 // ************************************ Subcomponent marker ***************************************************************************
 
 
-BEGIN @116 DESIGNATED 110  // Retain default thievery potions and prevent their effects from stacking
+BEGIN @90016 DESIGNATED 110  // Retain default thievery potions and prevent their effects from stacking
 SUBCOMPONENT @8  // Revised Thievery
 
 LAUNCH_ACTION_MACRO ~RR#AFIX~
